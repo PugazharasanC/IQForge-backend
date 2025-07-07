@@ -124,7 +124,9 @@ class RoomManager {
   joinRoom(pin, playerId, playerName, socketId) {
     const room = this.rooms.get(pin);
     if (!room || room.state.status !== "waiting") return null;
-
+    if (playerId === undefined) {
+      playerId = `player-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    }
     room.players.set(playerId, {
       id: playerId,
       name: playerName,
