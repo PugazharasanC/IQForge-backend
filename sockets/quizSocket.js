@@ -1,4 +1,3 @@
-
 // const rooms = {};
 
 // export default function quizSocket(io, socket) {
@@ -6,94 +5,94 @@
 
 // }
 // sockets/quizSocket.js
-import RoomManager from '../utils/RoomManager.js';
+import RoomManager from "../utils/RoomManager.js";
 
 export default function quizSocket(io, socket) {
   // Track player activity
   const updatePlayerPresence = (roomPin) => {
     const room = RoomManager.rooms.get(roomPin);
     if (!room) return;
-      console.log(room)
-      
-    const players = Array.from(room.players.values()).map(player => ({
+    console.log(room);
+
+    const players = Array.from(room.players.values()).map((player) => ({
       id: player.id,
       name: player.name,
       score: player.score,
-      status: 'online'
+      status: "online",
     }));
 
     // Broadcast to all in room
-    io.to(roomPin).emit('room:players', players);
+    io.to(roomPin).emit("room:players", players);
   };
 
   // Host creates room with quiz ID
-  socket.on('host:create', async (quizId) => {
-      try {
-        console.log(`Host ${socket.id} is creating room for quiz ID: ${quizId}`);
+  socket.on("host:create", async (quizId) => {
+    try {
+      console.log(`Host ${socket.id} is creating room for quiz ID: ${quizId}`);
       const room = await RoomManager.createRoom(socket.id, quizId);
       if (!room) {
-        socket.emit('error', { message: 'Failed to create room' });
+        socket.emit("error", { message: "Failed to create room" });
         return;
       }
 
       socket.join(room.pin);
-      socket.emit('room:created', {
+      socket.emit("room:created", {
         pin: room.pin,
         quiz: {
           title: room.quiz.title,
-          questionCount: room.quiz.questions.length
-        }
+          questionCount: room.quiz.questions.length,
+        },
       });
 
       // Initialize player list
       updatePlayerPresence(room.pin);
     } catch (error) {
-      socket.emit('error', { message: error.message });
+      socket.emit("error", { message: error.message });
     }
   });
 
   // Player joins room
-  socket.on('player:join', ({ pin, playerName, playerId }) => {
-      try {
-        console.log(`Player ${playerId} (${playerName}) is joining room with PIN: ${pin}`);
+  socket.on("player:join", ({ pin, playerName, playerId }) => {
+    try {
+      console.log(
+        `Player ${playerId} (${playerName}) is joining room with PIN: ${pin}`,
+      );
       const room = RoomManager.joinRoom(pin, playerId, playerName, socket.id);
       if (!room) {
-        socket.emit('error', { message: 'Invalid PIN or game started' });
+        socket.emit("error", { message: "Invalid PIN or game started" });
         return;
       }
 
       socket.join(room.pin);
-      socket.emit('player:joined', {
+      socket.emit("player:joined", {
         playerId,
         quizTitle: room.quiz.title,
-        playerCount: room.players.size
+        playerCount: room.players.size,
       });
 
       // Notify all players in the room
-      io.to(room.pin).emit('player:joined-room', {
+      io.to(room.pin).emit("player:joined-room", {
         playerId,
-        name: playerName
+        name: playerName,
       });
 
       // Update player list
       updatePlayerPresence(room.pin);
     } catch (error) {
-      socket.emit('error', { message: error.message });
+      socket.emit("error", { message: error.message });
     }
   });
 
   // Player leaves room voluntarily
-  socket.on('player:leave', () => {
+  socket.on("player:leave", () => {
     const room = RoomManager.getRoomBySocket(socket.id);
     if (!room) return;
-
     const player = RoomManager.getPlayer(socket.id);
     if (!player) return;
-
     // Notify all players in the room
-    io.to(room.pin).emit('player:left-room', {
+    io.to(room.pin).emit("player:left-room", {
       playerId: player.id,
-      name: player.name
+      name: player.name,
     });
 
     // Remove player
@@ -105,7 +104,7 @@ export default function quizSocket(io, socket) {
   });
 
   // Handle disconnections
-  socket.on('disconnect', () => {
+  socket.on("disconnect", () => {
     const room = RoomManager.getRoomBySocket(socket.id);
     if (!room) return;
 
@@ -113,7 +112,7 @@ export default function quizSocket(io, socket) {
 
     // Host disconnected - end game
     if (socket.id === room.hostSocketId) {
-      io.to(room.pin).emit('host:disconnected');
+      io.to(room.pin).emit("host:disconnected");
       RoomManager.endRoom(room.pin);
       return;
     }
@@ -121,9 +120,9 @@ export default function quizSocket(io, socket) {
     // Player disconnected
     if (player) {
       // Notify all players in the room
-      io.to(room.pin).emit('player:disconnected', {
+      io.to(room.pin).emit("player:disconnected", {
         playerId: player.id,
-        name: player.name
+        name: player.name,
       });
 
       RoomManager.removePlayer(socket.id);
@@ -136,7 +135,7 @@ export default function quizSocket(io, socket) {
   // ... rest of the existing event handlers ...
 
   // Request player list
-  socket.on('request:players', () => {
+  socket.on("request:players", () => {
     const room = RoomManager.getRoomBySocket(socket.id);
     if (!room) return;
 
